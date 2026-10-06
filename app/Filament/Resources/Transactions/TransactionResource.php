@@ -72,7 +72,7 @@ class TransactionResource extends Resource
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->hidden(fn ($record): bool => $record->isTransfer()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
