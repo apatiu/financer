@@ -75,7 +75,15 @@ class InsurancePolicy extends Model
             return null;
         }
 
-        return CarbonImmutable::parse($this->start_date)->startOfDay()->addYearsNoOverflow($year);
+        return self::dateAfterYears($this->start_date, $year);
+    }
+
+    /**
+     * วันที่หลังจากวันเริ่มต้นไป N ปี (29 ก.พ. ที่ไม่มีในปีถัดไปจะใช้ 28 ก.พ.)
+     */
+    public static function dateAfterYears(CarbonInterface|string $start, int $years): CarbonImmutable
+    {
+        return CarbonImmutable::parse($start)->startOfDay()->addYearsNoOverflow($years);
     }
 
     /**

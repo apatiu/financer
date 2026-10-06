@@ -23,6 +23,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -32,6 +34,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Carbon;
 use UnitEnum;
 
 class InsurancePolicyResource extends Resource
@@ -68,9 +71,56 @@ class InsurancePolicyResource extends Resource
                     Money::input('sum_assured', 'ทุนประกัน (ความคุ้มครอง ไม่นับเป็นทรัพย์สิน)')->default(0)->required(),
                     Money::input('premium_amount', 'เบี้ยต่องวด')->default(0)->required(),
                     Select::make('premium_frequency')->label('งวดชำระ')->options(PremiumFrequency::class)->default(PremiumFrequency::Yearly->value)->required(),
-                    DatePicker::make('start_date')->label('วันเริ่มคุ้มครอง'),
+                    DatePicker::make('start_date')
+                        ->label('วันเริ่มคุ้มครอง')
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set): void {
+                            if (filled($get('start_date')) && filled($get('contract_years'))) {
+                                $set('maturity_date', InsurancePolicy::dateAfterYears($get('start_date'), (int) $get('contract_years'))->toDateString());
+                            }
+                        }),
                     DatePicker::make('premium_end_date')->label('วันสิ้นสุดชำระเบี้ย'),
-                    DatePicker::make('maturity_date')->label('วันครบกำหนดสัญญา'),
+                    TextInput::make('contract_years')
+                        ->label('ระยะสัญญา (ปี)')
+                        ->helperText(fn (Get $get): string => filled($get('start_date'))
+                            ? 'กรอกจำนวนปี ระบบคำนวณ "วันครบกำหนดสัญญา" จากวันเริ่มคุ้มครองให้'
+                            : 'ต้องกรอก "วันเริ่มคุ้มครอง" ก่อน จึงจะคำนวณวันครบกำหนดได้')
+                        ->integer()
+                        ->minValue(1)
+                        ->maxValue(120)
+                        ->suffix('ปี')
+                        ->live(onBlur: true)
+                        ->dehydrated(false)
+                        ->afterStateHydrated(function (TextInput $component, ?InsurancePolicy $record): void {
+                            if ($record?->maturity_date !== null) {
+                                $component->state($record->policyYearFor($record->maturity_date));
+                            }
+                        })
+                        ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                            if (filled($state) && filled($get('start_date'))) {
+                                $set('maturity_date', InsurancePolicy::dateAfterYears($get('start_date'), (int) $state)->toDateString());
+                            }
+                        }),
+                    DatePicker::make('maturity_date')
+                        ->label('วันครบกำหนดสัญญา')
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set, mixed $state): void {
+                            $years = null;
+
+                            if (filled($state) && filled($get('start_date'))) {
+                                $start = Carbon::parse($get('start_date'));
+                                $approximate = (int) round($start->diffInYears(Carbon::parse($state), false));
+
+                                foreach ([$approximate, $approximate - 1, $approximate + 1] as $candidate) {
+                                    if ($candidate >= 1 && InsurancePolicy::dateAfterYears($start, $candidate)->isSameDay(Carbon::parse($state))) {
+                                        $years = $candidate;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $set('contract_years', $years);
+                        }),
                     DatePicker::make('next_premium_due')->label('ครบกำหนดจ่ายเบี้ยงวดถัดไป'),
                 ]),
                 Textarea::make('notes')->label('บันทึก')->columnSpanFull(),
