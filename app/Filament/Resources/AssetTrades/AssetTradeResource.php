@@ -7,14 +7,10 @@ use App\Enums\TradeType;
 use App\Filament\Resources\AssetTrades\Pages\CreateAssetTrade;
 use App\Filament\Resources\AssetTrades\Pages\EditAssetTrade;
 use App\Filament\Resources\AssetTrades\Pages\ListAssetTrades;
+use App\Filament\Resources\AssetTrades\Tables\AssetTradesTable;
 use App\Filament\Support\Money;
 use App\Models\AssetTrade;
 use BackedEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -23,9 +19,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -70,31 +63,7 @@ class AssetTradeResource extends Resource
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('date')->label('วันที่')->date()->sortable(),
-                TextColumn::make('account.name')->label('บัญชี')->searchable(),
-                TextColumn::make('asset.symbol')->label('สินทรัพย์')->searchable(),
-                TextColumn::make('type')->label('ประเภท')->badge(),
-                TextColumn::make('quantity')->label('จำนวน'),
-                TextColumn::make('price')->label('ราคา'),
-                Money::column('amount', 'ยอดสุทธิ'),
-            ])
-            ->defaultSort('date', 'desc')
-            ->filters([
-                SelectFilter::make('type')->label('ประเภท')->options(TradeType::class),
-                TrashedFilter::make(),
-            ])
-            ->recordActions([
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                ]),
-            ]);
+        return AssetTradesTable::configure($table);
     }
 
     public static function getRelations(): array

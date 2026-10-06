@@ -50,8 +50,29 @@ class AssetTrade extends Model
 
             $recalculate($trade);
         });
-        static::deleted($recalculate);
-        static::restored($recalculate);
+        static::saved(function (self $trade): void {
+            if ($trade->transaction_id !== null && $trade->wasChanged(['amount', 'date'])) {
+                Transaction::whereKey($trade->transaction_id)->update([
+                    'amount' => $trade->amount,
+                    'date' => $trade->date,
+                ]);
+            }
+        });
+        static::deleted(function (self $trade) use ($recalculate): void {
+            $recalculate($trade);
+
+            if ($trade->transaction_id !== null) {
+                $cash = Transaction::withTrashed()->find($trade->transaction_id);
+                $trade->isForceDeleting() ? $cash?->forceDelete() : $cash?->delete();
+            }
+        });
+        static::restored(function (self $trade) use ($recalculate): void {
+            $recalculate($trade);
+
+            if ($trade->transaction_id !== null) {
+                Transaction::withTrashed()->find($trade->transaction_id)?->restore();
+            }
+        });
     }
 
     /**
