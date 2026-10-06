@@ -21,7 +21,7 @@ class FixedAssetValuation extends Model
     protected function casts(): array
     {
         return [
-            'as_of_date' => 'date',
+            'as_of_date' => 'date:Y-m-d',
             'value' => 'integer',
             'method' => ValuationMethod::class,
         ];

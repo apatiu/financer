@@ -6,6 +6,7 @@ use App\Enums\InsuranceStatus;
 use App\Enums\InsuranceType;
 use App\Enums\PremiumFrequency;
 use App\Models\Concerns\BelongsToWorkspace;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\InsurancePolicyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -62,6 +63,39 @@ class InsurancePolicy extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    /**
+     * วันครบรอบปีกรมธรรม์ที่ N = วันเริ่มคุ้มครอง + N ปี (ปีที่ 0 คือวันเริ่มคุ้มครอง)
+     * คืน null ถ้ากรมธรรม์ยังไม่มีวันเริ่มคุ้มครอง
+     */
+    public function dateForPolicyYear(int $year): ?CarbonImmutable
+    {
+        if ($this->start_date === null) {
+            return null;
+        }
+
+        return CarbonImmutable::parse($this->start_date)->startOfDay()->addYearsNoOverflow($year);
+    }
+
+    /**
+     * เลขปีกรมธรรม์ของวันที่ที่ตรงกับวันครบรอบพอดี (null ถ้าไม่ตรงหรือไม่มีวันเริ่มคุ้มครอง)
+     */
+    public function policyYearFor(CarbonInterface $date): ?int
+    {
+        if ($this->start_date === null) {
+            return null;
+        }
+
+        $approximate = (int) round(CarbonImmutable::parse($this->start_date)->startOfDay()->diffInYears($date->startOfDay(), false));
+
+        foreach ([$approximate, $approximate - 1, $approximate + 1] as $year) {
+            if ($year >= 0 && $this->dateForPolicyYear($year)->isSameDay($date)) {
+                return $year;
+            }
+        }
+
+        return null;
     }
 
     /**
