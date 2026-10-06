@@ -2,6 +2,7 @@
 
 namespace App\Filament\Support;
 
+use App\Filament\Forms\Components\NumberInput;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -14,7 +15,7 @@ class Money
 {
     public static function input(string $name, string $label): TextInput
     {
-        return TextInput::make($name)
+        return NumberInput::make($name)
             ->label($label)
             ->numeric()
             ->step('0.01')
