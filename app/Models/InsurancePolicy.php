@@ -79,6 +79,33 @@ class InsurancePolicy extends Model
     }
 
     /**
+     * แปลงมูลค่าเวนคืน "ต่อทุนประกัน 1,000 บาท" (หน่วยบาท) เป็นมูลค่ารวม (สตางค์)
+     * คืน null ถ้ากรมธรรม์ยังไม่มีทุนประกัน
+     */
+    public function cashValueFromPerThousand(int|float|string $perThousand): ?int
+    {
+        if ($this->sum_assured <= 0) {
+            return null;
+        }
+
+        $total = bcdiv(bcmul((string) $perThousand, (string) $this->sum_assured, 8), '1000', 8);
+
+        return (int) bcadd($total, '0.5', 0);
+    }
+
+    /**
+     * มูลค่าเวนคืนต่อทุนประกัน 1,000 บาท (หน่วยบาท ทศนิยม 2 ตำแหน่ง) คืน null ถ้าไม่มีทุนประกัน
+     */
+    public function perThousandFor(int $cashValue): ?string
+    {
+        if ($this->sum_assured <= 0) {
+            return null;
+        }
+
+        return bcadd(bcdiv(bcmul((string) $cashValue, '1000', 8), (string) $this->sum_assured, 8), '0.005', 2);
+    }
+
+    /**
      * วันที่หลังจากวันเริ่มต้นไป N ปี (29 ก.พ. ที่ไม่มีในปีถัดไปจะใช้ 28 ก.พ.)
      */
     public static function dateAfterYears(CarbonInterface|string $start, int $years): CarbonImmutable

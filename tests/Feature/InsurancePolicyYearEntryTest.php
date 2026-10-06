@@ -54,6 +54,7 @@ test('entering a policy year stores the matching date and satang value', functio
     ($this->manager)()
         ->callAction(TestAction::make(CreateAction::class)->table(), [
             'entry_mode' => 'year',
+            'value_unit' => 'total',
             'policy_year' => 5,
             'cash_value' => 180000.50,
         ])
@@ -69,6 +70,7 @@ test('entering a date still works', function () {
     ($this->manager)()
         ->callAction(TestAction::make(CreateAction::class)->table(), [
             'entry_mode' => 'date',
+            'value_unit' => 'total',
             'as_of_date' => '2024-07-15',
             'cash_value' => 1000,
         ])
@@ -79,7 +81,7 @@ test('entering a date still works', function () {
 
 test('the year is required in year mode', function () {
     ($this->manager)()
-        ->callAction(TestAction::make(CreateAction::class)->table(), ['entry_mode' => 'year', 'cash_value' => 1000])
+        ->callAction(TestAction::make(CreateAction::class)->table(), ['entry_mode' => 'year', 'value_unit' => 'total', 'cash_value' => 1000])
         ->assertHasFormErrors(['policy_year' => 'required']);
 
     expect($this->policy->values()->count())->toBe(0);
@@ -90,7 +92,7 @@ test('year mode is unavailable without a start date', function () {
 
     ($this->manager)($policy)
         ->callAction(TestAction::make(CreateAction::class)->table(), [
-            'entry_mode' => 'year', 'policy_year' => 2, 'cash_value' => 1000,
+            'entry_mode' => 'year', 'value_unit' => 'total', 'policy_year' => 2, 'cash_value' => 1000,
         ])
         ->assertHasFormErrors(['entry_mode']);
 
@@ -103,8 +105,8 @@ test('editing an anniversary row opens in year mode and can change the year', fu
     ($this->manager)()
         ->loadTable()
         ->mountAction(TestAction::make(EditAction::class)->table($value))
-        ->assertSchemaStateSet(['entry_mode' => 'year', 'policy_year' => 5, 'cash_value' => 1000])
-        ->setActionData(['entry_mode' => 'year', 'policy_year' => 6, 'cash_value' => 1200])
+        ->assertSchemaStateSet(['entry_mode' => 'year', 'policy_year' => 5, 'cash_value' => 1000, 'value_unit' => 'total'])
+        ->setActionData(['entry_mode' => 'year', 'value_unit' => 'total', 'policy_year' => 6, 'cash_value' => 1200])
         ->callMountedAction()
         ->assertHasNoFormErrors();
 
@@ -132,10 +134,10 @@ test('the bulk action creates one row per year and replaces existing ones', func
     $this->policy->values()->create(['as_of_date' => '2021-03-01', 'cash_value' => 1]);
 
     ($this->manager)()
-        ->callAction(TestAction::make('bulkYears')->table(), ['rows' => [
-            ['year' => 1, 'cash_value' => 5000],
-            ['year' => 2, 'cash_value' => 12000.25],
-            ['year' => 3, 'cash_value' => 20000],
+        ->callAction(TestAction::make('bulkYears')->table(), ['value_unit' => 'total', 'rows' => [
+            ['year' => 1, 'amount' => 5000],
+            ['year' => 2, 'amount' => 12000.25],
+            ['year' => 3, 'amount' => 20000],
         ]])
         ->assertHasNoFormErrors()
         ->assertNotified();
@@ -149,9 +151,9 @@ test('the bulk action creates one row per year and replaces existing ones', func
 
 test('the bulk action rejects duplicate years', function () {
     ($this->manager)()
-        ->callAction(TestAction::make('bulkYears')->table(), ['rows' => [
-            ['year' => 1, 'cash_value' => 5000],
-            ['year' => 1, 'cash_value' => 6000],
+        ->callAction(TestAction::make('bulkYears')->table(), ['value_unit' => 'total', 'rows' => [
+            ['year' => 1, 'amount' => 5000],
+            ['year' => 1, 'amount' => 6000],
         ]])
         ->assertHasFormErrors();
 
