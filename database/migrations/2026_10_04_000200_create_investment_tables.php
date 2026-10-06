@@ -17,12 +17,14 @@ return new class extends Migration
             $table->string('type'); // stock | fund | gold | bond | crypto | other
             $table->string('symbol'); // PTT, K-USXNDQ-A(A), GOLD965
             $table->string('name');
-            $table->string('exchange')->nullable(); // SET, NASDAQ ...
+            $table->string('exchange')->default(''); // SET, NASDAQ ... ('' = ไม่ระบุ ไม่ใช้ NULL เพื่อให้ unique ทำงาน)
             $table->char('currency', 3)->default('THB'); // สกุลเงินของราคา
             $table->string('unit')->default('share'); // share | unit | baht_weight | gram | oz
+            // = workspace_id หรือ 0 ถ้าเป็นสินทรัพย์กลาง ตั้งค่าโดย Asset model
+            $table->unsignedBigInteger('scope_key')->default(0);
             $table->timestamps();
 
-            $table->unique(['workspace_id', 'type', 'symbol', 'exchange']);
+            $table->unique(['scope_key', 'type', 'symbol', 'exchange']);
         });
 
         // ราคาต่อ 1 หน่วย รายวัน ใช้ตีมูลค่าพอร์ต

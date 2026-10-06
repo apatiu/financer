@@ -10,10 +10,10 @@ return new class extends Migration
     {
         // สมุดบัญชี 1 เล่ม = 1 tenant ของ Filament
         // ผู้ใช้ใหม่ทุกคนได้ workspace ส่วนตัว 1 อัน และเชิญคนอื่นเข้ามาทีหลังได้
+        // เจ้าของ = สมาชิกที่มี role owner ใน workspace_user (แหล่งความจริงเดียว)
         Schema::create('workspaces', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('owner_id')->constrained('users')->cascadeOnDelete();
             $table->char('base_currency', 3)->default('THB');
             $table->timestamps();
         });
@@ -32,27 +32,45 @@ return new class extends Migration
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('type'); // bank | cash | credit_card | brokerage | gold
+            $table->string('type'); // bank | cash | credit_card | brokerage | fund | gold
             $table->string('institution')->nullable(); // ชื่อธนาคาร / โบรกเกอร์ / ร้านทอง
             $table->char('currency', 3)->default('THB');
             // จำนวนเงินทุกช่องเก็บเป็นหน่วยย่อย (สตางค์) แบบจำนวนเต็ม
             $table->bigInteger('opening_balance')->default(0);
             $table->date('opened_on')->nullable();
             $table->boolean('is_archived')->default(false);
+            // ชื่อเจ้าของถ้าไม่ใช่ตัวเอง (คนในครอบครัว) และสวิตช์เปิด/ปิดการนับรวมในความมั่งคั่งสุทธิ
+            $table->string('owner_name')->nullable();
+            $table->boolean('include_in_net_worth')->default(true);
             $table->timestamps();
 
             $table->index(['workspace_id', 'type']);
+        });
+
+        // อัตราแลกเปลี่ยน: 1 หน่วยของ currency = rate หน่วยของ base_currency ใน workspace
+        // ใช้อัตราล่าสุดที่ไม่เกินวันนี้ตอนรวมความมั่งคั่งสุทธิ
+        Schema::create('exchange_rates', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
+            $table->char('currency', 3);
+            $table->date('date');
+            $table->decimal('rate', 24, 8);
+            $table->timestamps();
+
+            $table->unique(['workspace_id', 'currency', 'date']);
         });
 
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->nullOnDelete();
+            // = parent_id หรือ 0 ถ้าเป็นหมวดบนสุด ให้ unique ทำงานได้ (NULL ไม่นับว่าซ้ำ) ตั้งค่าโดย Category model
+            $table->unsignedBigInteger('parent_key')->default(0);
             $table->string('name');
             $table->string('type'); // income | expense
             $table->timestamps();
 
-            $table->unique(['workspace_id', 'parent_id', 'name']);
+            $table->unique(['workspace_id', 'parent_key', 'name']);
         });
 
         Schema::create('transactions', function (Blueprint $table) {
@@ -80,6 +98,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('transactions');
         Schema::dropIfExists('categories');
+        Schema::dropIfExists('exchange_rates');
         Schema::dropIfExists('accounts');
         Schema::dropIfExists('workspace_user');
         Schema::dropIfExists('workspaces');

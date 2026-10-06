@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::create('insurance_policies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workspace_id')->constrained()->cascadeOnDelete();
+            // ประกันภัยรถยนต์ / ประกันทรัพย์สิน ผูกกับทรัพย์สินที่คุ้มครอง
+            $table->foreignId('fixed_asset_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name'); // ชื่อเรียกเอง เช่น "สะสมทรัพย์ 20/10 ของพ่อ"
             $table->string('insurer'); // บริษัทประกัน
             $table->string('policy_number')->nullable();
@@ -18,6 +20,9 @@ return new class extends Migration
             $table->string('type');
             $table->string('insured_name')->nullable(); // ผู้เอาประกัน
             $table->string('beneficiary')->nullable(); // ผู้รับประโยชน์
+            // ชื่อเจ้าของถ้าไม่ใช่ตัวเอง (คนในครอบครัว) และสวิตช์เปิด/ปิดการนับรวมในความมั่งคั่งสุทธิ
+            $table->string('owner_name')->nullable();
+            $table->boolean('include_in_net_worth')->default(true);
             $table->char('currency', 3)->default('THB');
 
             // จำนวนเงินทุกช่องเก็บเป็นสตางค์แบบจำนวนเต็ม
