@@ -9,6 +9,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class NetWorthOverview extends StatsOverviewWidget
 {
+    protected static ?int $sort = 1;
+
     protected ?string $pollingInterval = null;
 
     protected ?string $heading = 'ความมั่งคั่งสุทธิ';
