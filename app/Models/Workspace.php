@@ -78,6 +78,14 @@ class Workspace extends Model
     }
 
     /**
+     * @return HasMany<NetWorthSnapshot, $this>
+     */
+    public function netWorthSnapshots(): HasMany
+    {
+        return $this->hasMany(NetWorthSnapshot::class);
+    }
+
+    /**
      * @return HasMany<Account, $this>
      */
     public function accounts(): HasMany

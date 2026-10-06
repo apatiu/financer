@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Enums\AccountType;
 use App\Enums\FixedAssetStatus;
 use App\Enums\InsuranceStatus;
+use App\Models\NetWorthSnapshot;
 use App\Models\Workspace;
+use Carbon\CarbonInterface;
 
 /**
  * รวมความมั่งคั่งสุทธิของ workspace ณ ปัจจุบัน เป็นสตางค์ในสกุล base_currency
@@ -16,6 +18,17 @@ use App\Models\Workspace;
  */
 class NetWorthService
 {
+    /**
+     * บันทึกความมั่งคั่ง ณ วันที่ระบุ (ค่าเริ่มต้นวันนี้) ถ้าวันนั้นมีอยู่แล้วจะทับด้วยค่าล่าสุด
+     */
+    public function snapshot(Workspace $workspace, ?CarbonInterface $date = null): NetWorthSnapshot
+    {
+        return $workspace->netWorthSnapshots()->updateOrCreate(
+            ['date' => ($date ?? now())->toDateString()],
+            ['currency' => $workspace->base_currency] + $this->summarize($workspace),
+        );
+    }
+
     /**
      * @return array{
      *     cash: int, investment_cash: int, investments: int, insurance: int, fixed_assets: int,
